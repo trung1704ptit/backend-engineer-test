@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
-import { Pool } from 'pg';
 import { randomUUID } from 'crypto';
+import { DatabaseConnection, MigrationManager, migrations } from './database/index.js';
+import logger from './logger/index.js';
 
 const fastify = Fastify({ logger: true });
 
@@ -8,48 +9,39 @@ fastify.get('/', async (request, reply) => {
   return { hello: 'world' };
 });
 
-async function testPostgres(pool: Pool) {
+async function testPostgres() {
+  const db = DatabaseConnection.getInstance();
   const id = randomUUID();
   const name = 'Satoshi';
   const email = 'Nakamoto';
 
-  await pool.query(`DELETE FROM users;`);
+  await db.query(`DELETE FROM users;`);
 
-  await pool.query(`
+  await db.query(`
     INSERT INTO users (id, name, email)
     VALUES ($1, $2, $3);
   `, [id, name, email]);
 
-  const { rows } = await pool.query(`
+  const { rows } = await db.query(`
     SELECT * FROM users;
   `);
 
-  console.log('USERS', rows);
-}
-
-async function createTables(pool: Pool) {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL
-    );
-  `);
+  logger.info('Users retrieved from database', { userCount: rows.length, users: rows });
 }
 
 async function bootstrap() {
-  console.log('Bootstrapping...');
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required');
-  }
+  logger.info('Bootstrapping application...');
+  
+  // Initialize database connection
+  const db = DatabaseConnection.getInstance();
+  await db.connect();
 
-  const pool = new Pool({
-    connectionString: databaseUrl
-  });
+  // Run migrations
+  const migrationManager = new MigrationManager();
+  await migrationManager.runMigrations(migrations);
 
-  await createTables(pool);
-  await testPostgres(pool);
+  // Test database functionality
+  await testPostgres();
 }
 
 try {
@@ -59,6 +51,6 @@ try {
     host: '0.0.0.0'
   })
 } catch (err) {
-  fastify.log.error(err)
-  process.exit(1)
-};
+  logger.error('Application startup failed', {}, err as Error);
+  process.exit(1);
+}
