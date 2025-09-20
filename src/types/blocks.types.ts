@@ -1,23 +1,31 @@
 import { type FastifyRequest } from 'fastify';
 
 // Service types
-export interface Block {
+export interface Output {
+  address: string;
+  value: number;
+}
+
+export interface Input {
+  txId: string;
   index: number;
-  hash: string;
-  previousHash: string;
-  timestamp: number;
-  data: any;
-  nonce: number;
+}
+
+export interface Transaction {
+  id: string;
+  inputs: Array<Input>;
+  outputs: Array<Output>;
+}
+
+export interface Block {
+  id: string;
+  height: number;
+  transactions: Array<Transaction>;
 }
 
 // Controller request types
 export interface AddBlockRequest {
-  Body: {
-    data: any;
-    previousHash: string;
-    timestamp?: number;
-    nonce?: number;
-  };
+  Body: Block;
 }
 
 export interface GetBlocksRequest {

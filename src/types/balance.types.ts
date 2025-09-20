@@ -1,7 +1,7 @@
 import { type FastifyRequest } from 'fastify';
 
 // Service types
-export interface Transaction {
+export interface TransactionHistoryItem {
   txId: string;
   blockHeight: number;
   timestamp: string;
@@ -46,7 +46,7 @@ export interface BalanceResponse {
 export interface TransactionHistoryResponse {
   success: boolean;
   address: string;
-  transactions: Transaction[];
+  transactions: TransactionHistoryItem[];
   pagination: {
     limit: number;
     offset: number;

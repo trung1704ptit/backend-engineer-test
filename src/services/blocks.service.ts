@@ -1,38 +1,55 @@
 import logger from '../logger';
 import DatabaseConnection from '../database/connection';
-import type { Block } from '../types/blocks.types';
+import type { Block, Transaction, Input, Output } from '../types/blocks.types';
+import { UTXOService } from './utxo.service';
+import { BlockValidator, TransactionValidator } from '../validators';
 
 export class BlocksService {
   private db = DatabaseConnection.getInstance();
+  private utxoService = new UTXOService();
 
-  async addBlock(blockData: any, previousHash: string, timestamp?: number, nonce?: number): Promise<Block> {
+  async addBlock(block: Block): Promise<Block> {
     try {
-      logger.info('Adding new block to blockchain', { previousHash });
+      logger.info('Adding new block to blockchain', { blockId: block.id, height: block.height });
 
-      // TODO: Implement blockchain logic
-      // 1. Validate block data
-      // 2. Calculate block hash
-      // 3. Verify proof of work
-      // 4. Add to blockchain
+      // Get current height for validation
+      const currentHeight = await this.getCurrentBlockHeight();
 
-      const newBlock: Block = {
-        index: await this.getCurrentBlockHeight() + 1,
-        hash: this.calculateHash(blockData, previousHash, timestamp, nonce),
-        previousHash,
-        timestamp: timestamp || Date.now(),
-        data: blockData,
-        nonce: nonce || 0
-      };
+      // Validate block height
+      const heightValidation = BlockValidator.validateBlockHeight(block.height, currentHeight);
+      if (!heightValidation.isValid) {
+        throw new Error(heightValidation.error!);
+      }
 
-      // TODO: Save block to database
-      await this.saveBlock(newBlock);
+      // Validate block ID
+      const idValidation = BlockValidator.validateBlockId(block);
+      if (!idValidation.isValid) {
+        throw new Error(idValidation.error!);
+      }
 
-      logger.info('Block added successfully', { blockIndex: newBlock.index });
-      return newBlock;
+      // Validate transactions
+      const transactionValidation = await TransactionValidator.validateTransactions(
+        block.transactions,
+        (input) => this.utxoService.getInputValue(input)
+      );
+      if (!transactionValidation.isValid) {
+        throw new Error(`Transaction validation failed: ${transactionValidation.errors.join(', ')}`);
+      }
+
+      // Process transactions in UTXO set
+      for (const transaction of block.transactions) {
+        await this.utxoService.processTransaction(transaction, block.height);
+      }
+
+      // Save block to database
+      await this.saveBlock(block);
+
+      logger.info('Block added successfully', { blockId: block.id, height: block.height });
+      return block;
 
     } catch (error) {
-      logger.error('Failed to add block', {}, error as Error);
-      throw new Error('Failed to add block to blockchain');
+      logger.error('Failed to add block', { blockId: block.id }, error as Error);
+      throw error;
     }
   }
 
@@ -89,14 +106,11 @@ export class BlocksService {
     }
   }
 
-  // Private helper methods
-  private calculateHash(data: any, previousHash: string, timestamp?: number, nonce?: number): string {
-    // TODO: Implement proper hash calculation
-    return `hash_${Date.now()}_${Math.random()}`;
-  }
 
+
+  // Private helper methods
   private async saveBlock(block: Block): Promise<void> {
     // TODO: Save block to database
-    logger.info('Block saved to database', { blockIndex: block.index });
+    logger.info('Block saved to database', { blockId: block.id, height: block.height });
   }
 }

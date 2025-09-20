@@ -8,21 +8,15 @@ export class BlocksController {
 
   async addBlock(request: FastifyRequest<AddBlockRequest>, reply: FastifyReply) {
     try {
-      const { data, previousHash, timestamp, nonce } = request.body;
+      const block = request.body;
       
       logger.info('Adding new block', { 
-        previousHash, 
-        dataKeys: Object.keys(data || {}),
-        timestamp,
-        nonce 
+        blockId: block.id,
+        height: block.height,
+        transactionCount: block.transactions.length
       });
 
-      const newBlock = await this.blocksService.addBlock(
-        data, 
-        previousHash, 
-        timestamp, 
-        nonce
-      );
+      const newBlock = await this.blocksService.addBlock(block);
 
       return reply.code(201).send({
         success: true,
@@ -33,9 +27,12 @@ export class BlocksController {
     } catch (error) {
       logger.error('Failed to add block', {}, error as Error);
       
-      return reply.code(400).send({
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add block to blockchain';
+      const statusCode = errorMessage.includes('Invalid') ? 400 : 500;
+      
+      return reply.code(statusCode).send({
         success: false,
-        error: 'Failed to add block to blockchain'
+        error: errorMessage
       });
     }
   }
