@@ -1,1 +1,1 @@
-export { getDatabaseConfig, type DatabaseConfig } from './database.js';
+export { getDatabaseConfig } from './database';

@@ -1,14 +1,4 @@
-export interface DatabaseConfig {
-  host: string;
-  port: number;
-  database: string;
-  username: string;
-  password: string;
-  ssl?: boolean;
-  maxConnections?: number;
-  idleTimeout?: number;
-  connectionTimeout?: number;
-}
+import type { DatabaseConfig } from '../types/common.types';
 
 export const getDatabaseConfig = (): DatabaseConfig => {
   const databaseUrl = process.env.DATABASE_URL;

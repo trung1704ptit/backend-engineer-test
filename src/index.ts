@@ -1,12 +1,26 @@
 import Fastify from 'fastify';
 import { randomUUID } from 'crypto';
-import { DatabaseConnection, MigrationManager, migrations } from './database/index.js';
-import logger from './logger/index.js';
+import { DatabaseConnection, MigrationManager, migrations } from './database/index';
+import logger from './logger/index';
+import { registerRoutes } from './routes/index';
 
 const fastify = Fastify({ logger: true });
 
+// Register all API routes
+await registerRoutes(fastify);
+
 fastify.get('/', async (request, reply) => {
-  return { hello: 'world' };
+  return { 
+    message: 'Blockchain API Server',
+    version: '1.0.0',
+    endpoints: {
+      docs: '/api/docs',
+      health: '/health',
+      blocks: '/blocks',
+      balance: '/balance/:address',
+      rollback: '/rollback?height=number'
+    }
+  };
 });
 
 async function testPostgres() {

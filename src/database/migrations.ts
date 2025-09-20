@@ -1,12 +1,6 @@
-import DatabaseConnection from './connection.js';
-import logger from '../logger/index.js';
-
-export interface Migration {
-  id: string;
-  name: string;
-  up: string;
-  down: string;
-}
+import DatabaseConnection from './connection';
+import logger from '../logger/index';
+import type { Migration } from '../types/common.types';
 
 export class MigrationManager {
   private db: DatabaseConnection;

@@ -1,5 +1,5 @@
-import DatabaseConnection from '../database/connection.js';
-import logger from '../logger/index.js';
+import DatabaseConnection from '../database/connection';
+import logger from '../logger/index';
 
 export class DatabaseUtils {
   private static db = DatabaseConnection.getInstance();

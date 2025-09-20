@@ -1,1 +1,1 @@
-export { DatabaseUtils } from './database.js';
+export { DatabaseUtils } from './database';
