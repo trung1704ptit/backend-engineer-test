@@ -26,16 +26,15 @@ export class RollbackValidator {
 
   static validateRollbackRequest(
     targetHeight: number,
-    currentHeight: number,
-    confirmed: boolean = false
+    currentHeight: number
   ): RollbackValidationResult {
     // Validate target height is valid
-    if (typeof targetHeight !== 'number' || !Number.isInteger(targetHeight) || targetHeight < 1) {
+    if (typeof targetHeight !== 'number' || !Number.isInteger(targetHeight) || targetHeight < 0) {
       return {
         isValid: false,
         currentHeight,
         requiresConfirmation: false,
-        error: 'Target height must be a positive integer'
+        error: 'Target height must be a non-negative integer'
       };
     }
 
@@ -50,24 +49,13 @@ export class RollbackValidator {
     }
 
     const blocksToRemove = currentHeight - targetHeight;
-    const requiresConfirmation = blocksToRemove > 10;
-
-    // Check if confirmation is required but not provided
-    if (requiresConfirmation && !confirmed) {
-      return {
-        isValid: false,
-        currentHeight,
-        requiresConfirmation: true,
-        error: 'This rollback operation requires confirmation'
-      };
-    }
 
     // Validate rollback is not too deep (max 2000 blocks as per requirements)
     if (blocksToRemove > 2000) {
       return {
         isValid: false,
         currentHeight,
-        requiresConfirmation: true,
+        requiresConfirmation: false,
         error: 'Rollback operation exceeds maximum allowed depth (2000 blocks)'
       };
     }
@@ -75,7 +63,7 @@ export class RollbackValidator {
     return {
       isValid: true,
       currentHeight,
-      requiresConfirmation,
+      requiresConfirmation: false,
       message: 'Rollback request is valid'
     };
   }

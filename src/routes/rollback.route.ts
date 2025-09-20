@@ -10,6 +10,10 @@ export async function rollbackRoutes(fastify: FastifyInstance) {
     handler: rollbackController.rollback.bind(rollbackController)
   });
 
+  fastify.post('/rollback/clear-utxos', {
+    handler: rollbackController.clearAllUTXOs.bind(rollbackController)
+  });
+
   fastify.get('/rollback/status', {
     schema: getRollbackStatusSchema,
     handler: rollbackController.getRollbackStatus.bind(rollbackController)

@@ -8,14 +8,13 @@ export class RollbackController {
 
   async rollback(request: FastifyRequest<RollbackRequest>, reply: FastifyReply) {
     try {
-      const { height, confirm = false } = request.query;
+      const { height } = request.query;
       
       logger.info('Rollback requested', { 
-        targetHeight: height, 
-        confirmed: confirm 
+        targetHeight: height
       });
 
-      const rollbackInfo = await this.rollbackService.rollbackToHeight(height, confirm);
+      const rollbackInfo = await this.rollbackService.rollbackToHeight(height);
 
       return reply.send({
         success: true,
@@ -35,20 +34,36 @@ export class RollbackController {
         if (error.message.includes('Cannot rollback')) {
           statusCode = 400;
           errorMessage = error.message;
-        } else if (error.message.includes('requires confirmation')) {
-          statusCode = 409;
-          errorMessage = error.message;
         }
       }
 
       return reply.code(statusCode).send({
         success: false,
-        error: errorMessage,
-        ...(statusCode === 409 && { requiresConfirmation: true })
+        error: errorMessage
       });
     }
   }
 
+  async clearAllUTXOs(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      logger.info('Clearing all UTXOs');
+      
+      await this.rollbackService.clearAllUTXOs();
+
+      return reply.send({
+        success: true,
+        message: 'All UTXOs cleared successfully'
+      });
+
+    } catch (error) {
+      logger.error('Failed to clear UTXOs', {}, error as Error);
+      
+      return reply.code(500).send({
+        success: false,
+        error: 'Failed to clear UTXOs'
+      });
+    }
+  }
   async getRollbackStatus(request: FastifyRequest<RollbackStatusRequest>, reply: FastifyReply) {
     try {
       logger.info('Retrieving rollback status');

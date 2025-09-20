@@ -71,6 +71,7 @@ export class MigrationManager {
       );
       logger.info(`Migration rolled back: ${migrationName}`);
     } catch (error) {
+      console.log(error)
       logger.error(`Rollback failed: ${migrationName}`, {}, error as Error);
       throw error;
     }

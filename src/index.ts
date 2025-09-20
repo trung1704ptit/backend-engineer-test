@@ -65,6 +65,7 @@ try {
     host: '0.0.0.0'
   })
 } catch (err) {
+  console.error(err)
   logger.error('Application startup failed', {}, err as Error);
   process.exit(1);
 }

@@ -25,7 +25,6 @@ export interface RollbackStatus {
 export interface RollbackRequest {
   Querystring: {
     height: number;
-    confirm?: boolean;
   };
 }
 

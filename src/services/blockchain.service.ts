@@ -168,6 +168,7 @@ export class BlockchainService {
       return rollbackInfo;
 
     } catch (error) {
+      console.log(error)
       logger.error('Rollback failed', { targetHeight }, error as Error);
       throw error;
     }

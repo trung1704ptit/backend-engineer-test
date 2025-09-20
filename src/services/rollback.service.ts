@@ -11,14 +11,14 @@ export class RollbackService {
   private blocksService = new BlocksService();
   private utxoService = new UTXOService();
 
-  async rollbackToHeight(targetHeight: number, confirmed: boolean = false): Promise<RollbackInfo> {
+  async rollbackToHeight(targetHeight: number): Promise<RollbackInfo> {
     try {
-      logger.info('Rollback requested', { targetHeight, confirmed });
+      logger.info('Rollback requested', { targetHeight });
 
       const currentHeight = await this.blocksService.getCurrentBlockHeight();
 
       // Validate rollback request using validator
-      const validation = RollbackValidator.validateRollbackRequest(targetHeight, currentHeight, confirmed);
+      const validation = RollbackValidator.validateRollbackRequest(targetHeight, currentHeight);
       if (!validation.isValid) {
         throw new Error(validation.error!);
       }
@@ -46,6 +46,7 @@ export class RollbackService {
       return rollbackInfo;
 
     } catch (error) {
+      console.log(error)
       logger.error('Rollback failed', { targetHeight }, error as Error);
       throw error;
     }
@@ -60,8 +61,30 @@ export class RollbackService {
       logger.info('Retrieving rollback status');
 
       const currentHeight = await this.blocksService.getCurrentBlockHeight();
-      const lastRollback = null; // TODO: Get from database
-      const rollbackHistory: RollbackInfo[] = []; // TODO: Get from database
+      
+      // Get last rollback
+      const lastRollbackResult = await this.db.query(
+        'SELECT from_height, to_height, blocks_removed, timestamp FROM rollback_history ORDER BY timestamp DESC LIMIT 1'
+      );
+      
+      const lastRollback = lastRollbackResult.rows.length > 0 ? {
+        fromHeight: lastRollbackResult.rows[0].from_height,
+        toHeight: lastRollbackResult.rows[0].to_height,
+        blocksRemoved: lastRollbackResult.rows[0].blocks_removed,
+        timestamp: lastRollbackResult.rows[0].timestamp
+      } : null;
+
+      // Get rollback history (last 10)
+      const historyResult = await this.db.query(
+        'SELECT from_height, to_height, blocks_removed, timestamp FROM rollback_history ORDER BY timestamp DESC LIMIT 10'
+      );
+      
+      const rollbackHistory: RollbackInfo[] = historyResult.rows.map((row: any) => ({
+        fromHeight: row.from_height,
+        toHeight: row.to_height,
+        blocksRemoved: row.blocks_removed,
+        timestamp: row.timestamp
+      }));
 
       return {
         currentHeight,
@@ -79,8 +102,17 @@ export class RollbackService {
     try {
       logger.info('Retrieving rollback history', { limit, offset });
 
-      // TODO: Get rollback history from database with pagination
-      const rollbackHistory: RollbackInfo[] = [];
+      const result = await this.db.query(
+        'SELECT from_height, to_height, blocks_removed, timestamp FROM rollback_history ORDER BY timestamp DESC LIMIT $1 OFFSET $2',
+        [limit, offset]
+      );
+      
+      const rollbackHistory: RollbackInfo[] = result.rows.map((row: any) => ({
+        fromHeight: row.from_height,
+        toHeight: row.to_height,
+        blocksRemoved: row.blocks_removed,
+        timestamp: row.timestamp
+      }));
 
       logger.info('Rollback history retrieved', { 
         count: rollbackHistory.length,
@@ -138,6 +170,14 @@ export class RollbackService {
 
       // Remove blocks from storage
       await this.removeBlocksFromHeight(targetHeight + 1);
+
+      // If rolling back to height 0, clear all UTXOs
+      if (targetHeight === 0) {
+        await this.clearAllUTXOs();
+      } else {
+        // For partial rollbacks, also clear UTXOs from removed blocks
+        await this.clearUTXOsFromHeight(targetHeight + 1);
+      }
 
       // Update blockchain state
       await this.updateBlockchainState(targetHeight);
@@ -204,7 +244,10 @@ export class RollbackService {
    */
   private async removeUTXO(txId: string, outputIndex: number): Promise<void> {
     try {
-      // TODO: Remove UTXO from database
+      await this.db.query(
+        'DELETE FROM utxos WHERE tx_id = $1 AND output_index = $2',
+        [txId, outputIndex]
+      );
       logger.info('UTXO removed during rollback', { txId, outputIndex });
     } catch (error) {
       logger.error('Failed to remove UTXO', { txId, outputIndex }, error as Error);
@@ -217,8 +260,34 @@ export class RollbackService {
    */
   private async restoreUTXO(txId: string, outputIndex: number, blockHeight: number): Promise<void> {
     try {
-      // TODO: Get the original output details and restore UTXO
-      // This would require looking up the original transaction and output
+      // Find the block that contains the transaction with the given txId
+      const result = await this.db.query(
+        'SELECT data FROM blocks WHERE data @> $1',
+        [`{"transactions":[{"id":"${txId}"}]}`]
+      );
+
+      if (result.rows.length === 0) {
+        throw new Error(`Transaction ${txId} not found in any block`);
+      }
+
+      const block = result.rows[0].data;
+      const transaction = block.transactions.find((tx: any) => tx.id === txId);
+      
+      if (!transaction) {
+        throw new Error(`Transaction ${txId} not found`);
+      }
+
+      const output = transaction.outputs[outputIndex];
+      if (!output) {
+        throw new Error(`Output ${outputIndex} not found in transaction ${txId}`);
+      }
+
+      // Restore the UTXO
+      await this.db.query(
+        'INSERT INTO utxos (tx_id, output_index, address, value, block_height) VALUES ($1, $2, $3, $4, $5)',
+        [txId, outputIndex, output.address, output.value, block.height]
+      );
+
       logger.info('UTXO restored during rollback', { txId, outputIndex, blockHeight });
     } catch (error) {
       logger.error('Failed to restore UTXO', { txId, outputIndex }, error as Error);
@@ -231,8 +300,12 @@ export class RollbackService {
    */
   private async getBlocksToRollback(fromHeight: number, toHeight: number): Promise<Block[]> {
     try {
-      // TODO: Get blocks from database in the specified height range
-      const blocks: Block[] = [];
+      const result = await this.db.query(
+        'SELECT data FROM blocks WHERE height >= $1 AND height <= $2 ORDER BY height DESC',
+        [fromHeight, toHeight]
+      );
+      
+      const blocks: Block[] = result.rows.map((row: any) => row.data);
       logger.info('Retrieved blocks for rollback', { fromHeight, toHeight, count: blocks.length });
       return blocks;
     } catch (error) {
@@ -246,7 +319,10 @@ export class RollbackService {
    */
   private async removeBlocksFromHeight(height: number): Promise<void> {
     try {
-      // TODO: Remove blocks from database starting from the given height
+      await this.db.query(
+        'DELETE FROM blocks WHERE height >= $1',
+        [height]
+      );
       logger.info('Removed blocks from storage', { fromHeight: height });
     } catch (error) {
       logger.error('Failed to remove blocks from storage', { height }, error as Error);
@@ -259,10 +335,38 @@ export class RollbackService {
    */
   private async updateBlockchainState(targetHeight: number): Promise<void> {
     try {
-      // TODO: Update blockchain state (current height, etc.)
+      // The blockchain state is automatically updated when blocks are deleted
+      // The current height is determined by MAX(height) from blocks table
+      // No additional state update needed since we're using the database as the source of truth
       logger.info('Blockchain state updated', { newHeight: targetHeight });
     } catch (error) {
       logger.error('Failed to update blockchain state', { targetHeight }, error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear UTXOs from blocks at or above the given height
+   */
+  private async clearUTXOsFromHeight(height: number): Promise<void> {
+    try {
+      await this.db.query('DELETE FROM utxos WHERE block_height >= $1', [height]);
+      logger.info('UTXOs cleared from height', { fromHeight: height });
+    } catch (error) {
+      logger.error('Failed to clear UTXOs from height', { height }, error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear all UTXOs (used when rolling back to height 0)
+   */
+  async clearAllUTXOs(): Promise<void> {
+    try {
+      await this.db.query('DELETE FROM utxos');
+      logger.info('All UTXOs cleared during rollback to height 0');
+    } catch (error) {
+      logger.error('Failed to clear all UTXOs', {}, error as Error);
       throw error;
     }
   }
@@ -272,7 +376,10 @@ export class RollbackService {
    */
   private async saveRollbackHistory(rollbackInfo: RollbackInfo): Promise<void> {
     try {
-      // TODO: Save rollback operation to database
+      await this.db.query(
+        'INSERT INTO rollback_history (from_height, to_height, blocks_removed, timestamp) VALUES ($1, $2, $3, $4)',
+        [rollbackInfo.fromHeight, rollbackInfo.toHeight, rollbackInfo.blocksRemoved, rollbackInfo.timestamp]
+      );
       logger.info('Rollback history saved', rollbackInfo);
     } catch (error) {
       logger.error('Failed to save rollback history', rollbackInfo, error as Error);
