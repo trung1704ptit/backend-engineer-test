@@ -20,9 +20,6 @@ export interface OutputValidationResult {
 }
 
 export class UTXOValidator {
-  /**
-   * Validate that an input references an existing UTXO
-   */
   static async validateInputExists(
     input: Input,
     getUTXO: (txId: string, outputIndex: number) => Promise<UTXO | null>
@@ -63,9 +60,6 @@ export class UTXOValidator {
     }
   }
 
-  /**
-   * Validate output structure and values
-   */
   static validateOutput(output: Output, index: number): OutputValidationResult {
     const errors: string[] = [];
 
@@ -96,9 +90,6 @@ export class UTXOValidator {
     };
   }
 
-  /**
-   * Validate all outputs in a transaction
-   */
   static validateOutputs(outputs: Output[]): OutputValidationResult {
     const errors: string[] = [];
 
@@ -115,9 +106,6 @@ export class UTXOValidator {
     };
   }
 
-  /**
-   * Validate UTXO structure
-   */
   static validateUTXOStructure(utxo: UTXO): UTXOValidationResult {
     const errors: string[] = [];
 
@@ -212,14 +200,9 @@ export class UTXOValidator {
       return false;
     }
 
-    // Basic validation - address should be at least 10 characters
-    // In a real implementation, this would check against specific address formats
     return address.trim().length >= 10;
   }
 
-  /**
-   * Validate value is within reasonable bounds
-   */
   static validateValue(value: number): boolean {
     return typeof value === 'number' && 
            value >= 0 && 

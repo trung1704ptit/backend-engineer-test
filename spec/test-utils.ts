@@ -3,11 +3,6 @@ import crypto from 'crypto';
 import type { Block, Transaction, Input, Output } from '../src/types/blocks.types';
 import type { UTXO } from '../src/services/utxo.service';
 
-/**
- * Test utilities and mock data for comprehensive testing
- */
-
-// Mock logger that doesn't output during tests
 export const mockLogger = {
   info: () => {},
   warn: () => {},
@@ -28,7 +23,6 @@ export class MockDatabaseConnection {
   }
 
   async query(sql: string, params?: any[]): Promise<{ rows: any[] }> {
-    // Mock query implementation
     return { rows: [] };
   }
 
@@ -50,7 +44,6 @@ export class MockDatabaseConnection {
   }
 }
 
-// Test data factories
 export class TestDataFactory {
   static createInput(txId: string = 'tx1', index: number = 0): Input {
     return { txId, index };
@@ -93,7 +86,7 @@ export class TestDataFactory {
     block3: Block;
     expectedBalances: Record<string, Record<string, number>>;
   } {
-    // Use valid Bitcoin addresses
+    // MOCK addresses
     const addr1 = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
     const addr2 = '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2';
     const addr3 = '1C4hvV6eGx3Y3Jf8A9D0sE8bF1cG2dH3iJ4';
@@ -266,7 +259,6 @@ export function expectBalances(utxos: UTXO[], expectedBalances: Record<string, n
   }
 }
 
-// Mock Fastify request and reply objects
 export function createMockRequest(params: any = {}, query: any = {}, body: any = {}): any {
   return {
     params,

@@ -97,7 +97,7 @@ export class MigrationManager {
   }
 }
 
-// Example migrations
+// Blockchain migrations
 export const migrations: Migration[] = [
   {
     id: '001',
@@ -124,5 +124,56 @@ export const migrations: Migration[] = [
       DROP INDEX IF EXISTS idx_users_email;
       DROP INDEX IF EXISTS idx_users_created_at;
     `
+  },
+  {
+    id: '003',
+    name: 'create_blocks_table',
+    up: `
+      CREATE TABLE IF NOT EXISTS blocks (
+        id TEXT PRIMARY KEY,
+        height INTEGER NOT NULL UNIQUE,
+        data JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_blocks_height ON blocks(height);
+      CREATE INDEX IF NOT EXISTS idx_blocks_created_at ON blocks(created_at);
+    `,
+    down: 'DROP TABLE IF EXISTS blocks;'
+  },
+  {
+    id: '004',
+    name: 'create_utxos_table',
+    up: `
+      CREATE TABLE IF NOT EXISTS utxos (
+        tx_id TEXT NOT NULL,
+        output_index INTEGER NOT NULL,
+        address TEXT NOT NULL,
+        value NUMERIC NOT NULL,
+        block_height INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (tx_id, output_index)
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_utxos_address ON utxos(address);
+      CREATE INDEX IF NOT EXISTS idx_utxos_block_height ON utxos(block_height);
+    `,
+    down: 'DROP TABLE IF EXISTS utxos;'
+  },
+  {
+    id: '005',
+    name: 'create_rollback_history_table',
+    up: `
+      CREATE TABLE IF NOT EXISTS rollback_history (
+        id SERIAL PRIMARY KEY,
+        from_height INTEGER NOT NULL,
+        to_height INTEGER NOT NULL,
+        blocks_removed INTEGER NOT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_rollback_timestamp ON rollback_history(timestamp);
+    `,
+    down: 'DROP TABLE IF EXISTS rollback_history;'
   }
 ];

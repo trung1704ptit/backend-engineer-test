@@ -57,8 +57,11 @@ export class BlocksService {
     try {
       logger.info('Retrieving all blocks');
       
-      // TODO: Get blocks from database
-      const blocks: Block[] = [];
+      const result = await this.db.query(
+        'SELECT data FROM blocks ORDER BY height ASC'
+      );
+      
+      const blocks: Block[] = result.rows.map((row: any) => row.data);
       
       logger.info('Blocks retrieved successfully', { count: blocks.length });
       return blocks;
@@ -73,15 +76,18 @@ export class BlocksService {
     try {
       logger.info('Retrieving block by height', { height });
 
-      // TODO: Get block from database by height
-      const block: Block | null = null;
+      const result = await this.db.query(
+        'SELECT data FROM blocks WHERE height = $1',
+        [height]
+      );
 
-      if (block) {
-        logger.info('Block retrieved successfully', { height });
-      } else {
+      if (result.rows.length === 0) {
         logger.warn('Block not found', { height });
+        return null;
       }
 
+      const block: Block = result.rows[0].data;
+      logger.info('Block retrieved successfully', { height });
       return block;
 
     } catch (error) {
@@ -94,8 +100,11 @@ export class BlocksService {
     try {
       logger.info('Getting current block height');
       
-      // TODO: Get from database
-      const height = 100; // Placeholder
+      const result = await this.db.query(
+        'SELECT COALESCE(MAX(height), 0) as height FROM blocks'
+      );
+      
+      const height = parseInt(result.rows[0].height);
       
       logger.info('Current block height retrieved', { height });
       return height;
@@ -107,10 +116,21 @@ export class BlocksService {
   }
 
 
-
   // Private helper methods
   private async saveBlock(block: Block): Promise<void> {
-    // TODO: Save block to database
-    logger.info('Block saved to database', { blockId: block.id, height: block.height });
+    try {
+      logger.info('Saving block to database', { blockId: block.id, height: block.height });
+      
+      await this.db.query(
+        'INSERT INTO blocks (id, height, data) VALUES ($1, $2, $3)',
+        [block.id, block.height, JSON.stringify(block)]
+      );
+      
+      logger.info('Block saved successfully', { blockId: block.id, height: block.height });
+
+    } catch (error) {
+      logger.error('Failed to save block', { blockId: block.id }, error as Error);
+      throw error;
+    }
   }
 }

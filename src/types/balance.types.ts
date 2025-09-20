@@ -1,6 +1,5 @@
 import { type FastifyRequest } from 'fastify';
 
-// Service types
 export interface TransactionHistoryItem {
   txId: string;
   blockHeight: number;

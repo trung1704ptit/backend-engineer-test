@@ -1,37 +1,20 @@
 import crypto from 'crypto';
 import type { Block, Transaction } from '../types/blocks.types';
 
-/**
- * Utility class for calculating block IDs according to the specification
- */
 export class BlockIdCalculator {
-  /**
-   * Calculate the expected block ID based on height and transaction IDs
-   * @param height - The block height
-   * @param transactions - Array of transactions in the block
-   * @returns SHA256 hash of height + concatenated transaction IDs
-   */
+
   static calculateBlockId(height: number, transactions: Transaction[]): string {
     const dataToHash = height.toString() + transactions.map(tx => tx.id).join('');
     return crypto.createHash('sha256').update(dataToHash).digest('hex');
   }
 
-  /**
-   * Validate if a block has the correct ID
-   * @param block - The block to validate
-   * @returns true if the block ID is correct, false otherwise
-   */
+
   static validateBlockId(block: Block): boolean {
     const expectedId = this.calculateBlockId(block.height, block.transactions);
     return block.id === expectedId;
   }
 
-  /**
-   * Calculate transaction balance (sum of inputs vs outputs)
-   * Note: This is a placeholder - in practice, you need UTXO lookup
-   * @param transaction - The transaction to analyze
-   * @returns Object with inputSum, outputSum, and isBalanced
-   */
+
   static calculateTransactionBalance(transaction: Transaction): {
     inputSum: number;
     outputSum: number;
@@ -39,8 +22,7 @@ export class BlockIdCalculator {
   } {
     const outputSum = transaction.outputs.reduce((sum, output) => sum + output.value, 0);
     
-    // Note: Input sum calculation requires UTXO lookup in real implementation
-    const inputSum = 0; // Placeholder - would need UTXO service
+    const inputSum = 0;
     
     return {
       inputSum,
@@ -50,9 +32,6 @@ export class BlockIdCalculator {
   }
 }
 
-/**
- * Example usage and testing
- */
 export function demonstrateBlockIdCalculation() {
   console.log('=== Block ID Calculation Examples ===\n');
 

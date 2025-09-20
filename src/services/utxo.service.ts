@@ -66,7 +66,11 @@ export class UTXOService {
 
   private async addUTXO(utxo: UTXO): Promise<void> {
     try {
-      // TODO: Save UTXO to database
+      await this.db.query(
+        'INSERT INTO utxos (tx_id, output_index, address, value, block_height) VALUES ($1, $2, $3, $4, $5)',
+        [utxo.txId, utxo.outputIndex, utxo.address, utxo.value, utxo.blockHeight]
+      );
+      
       logger.info('UTXO added', { 
         txId: utxo.txId, 
         outputIndex: utxo.outputIndex, 
@@ -81,7 +85,11 @@ export class UTXOService {
 
   private async removeUTXO(txId: string, outputIndex: number): Promise<void> {
     try {
-      // TODO: Remove UTXO from database
+      await this.db.query(
+        'DELETE FROM utxos WHERE tx_id = $1 AND output_index = $2',
+        [txId, outputIndex]
+      );
+      
       logger.info('UTXO removed', { txId, outputIndex });
     } catch (error) {
       logger.error('Failed to remove UTXO', { txId, outputIndex }, error as Error);
@@ -91,9 +99,23 @@ export class UTXOService {
 
   private async getUTXO(txId: string, outputIndex: number): Promise<UTXO | null> {
     try {
-      // TODO: Get UTXO from database
-      // For now, return null as placeholder
-      return null;
+      const result = await this.db.query(
+        'SELECT tx_id, output_index, address, value, block_height FROM utxos WHERE tx_id = $1 AND output_index = $2',
+        [txId, outputIndex]
+      );
+      
+      if (result.rows.length === 0) {
+        return null;
+      }
+      
+      const row = result.rows[0];
+      return {
+        txId: row.tx_id,
+        outputIndex: row.output_index,
+        address: row.address,
+        value: parseFloat(row.value),
+        blockHeight: row.block_height
+      };
     } catch (error) {
       logger.error('Failed to get UTXO', { txId, outputIndex }, error as Error);
       throw error;
@@ -102,8 +124,19 @@ export class UTXOService {
 
   async getAddressUTXOs(address: string): Promise<UTXO[]> {
     try {
-      // TODO: Get all UTXOs for an address from database
-      const utxos: UTXO[] = [];
+      const result = await this.db.query(
+        'SELECT tx_id, output_index, address, value, block_height FROM utxos WHERE address = $1',
+        [address]
+      );
+      
+      const utxos: UTXO[] = result.rows.map(row => ({
+        txId: row.tx_id,
+        outputIndex: row.output_index,
+        address: row.address,
+        value: parseFloat(row.value),
+        blockHeight: row.block_height
+      }));
+      
       logger.info('Address UTXOs retrieved', { address, count: utxos.length });
       return utxos;
     } catch (error) {

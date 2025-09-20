@@ -23,9 +23,7 @@ export interface RollbackSafetyResult {
 }
 
 export class RollbackValidator {
-  /**
-   * Validate rollback request parameters
-   */
+
   static validateRollbackRequest(
     targetHeight: number,
     currentHeight: number,

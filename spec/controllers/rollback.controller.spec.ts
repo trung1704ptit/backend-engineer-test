@@ -1,6 +1,6 @@
 import { expect, test, describe, beforeEach } from "bun:test";
 import { RollbackController } from "../../src/controllers/rollback.controller";
-import { TestDataFactory, createMockRequest, createMockReply } from "../test-utils";
+import { createMockRequest } from "../test-utils";
 
 describe("Rollback Controller", () => {
   let controller: RollbackController;

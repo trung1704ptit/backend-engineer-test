@@ -1,6 +1,6 @@
 import { expect, test, describe, beforeEach } from "bun:test";
 import { BalanceController } from "../../src/controllers/balance.controller";
-import { TestDataFactory, createMockRequest, createMockReply } from "../test-utils";
+import { createMockRequest } from "../test-utils";
 
 describe("Balance Controller", () => {
   let controller: BalanceController;

@@ -1,6 +1,6 @@
 import { expect, test, describe, beforeEach } from "bun:test";
 import { BlocksController } from "../../src/controllers/blocks.controller";
-import { TestDataFactory, createMockRequest, createMockReply } from "../test-utils";
+import { TestDataFactory, createMockRequest } from "../test-utils";
 
 describe("Blocks Controller", () => {
   let controller: BlocksController;

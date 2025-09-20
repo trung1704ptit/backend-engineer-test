@@ -184,9 +184,7 @@ export class TransactionValidator {
     });
   }
 
-  /**
-   * Validate coinbase transaction (genesis transaction with no inputs)
-   */
+
   static validateCoinbaseTransaction(transaction: Transaction): TransactionValidationResult {
     const errors: string[] = [];
 
@@ -212,9 +210,6 @@ export class TransactionValidator {
     };
   }
 
-  /**
-   * Check if transaction is a coinbase transaction
-   */
   static isCoinbaseTransaction(transaction: Transaction): boolean {
     return transaction.inputs.length === 0;
   }

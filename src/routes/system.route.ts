@@ -1,40 +1,17 @@
 import { type FastifyInstance } from 'fastify';
 import { SystemController } from '../controllers';
+import { getHealthSchema, getApiDocsSchema } from '../schemas';
 
 export async function systemRoutes(fastify: FastifyInstance) {
   const systemController = new SystemController();
 
-  // Health check endpoint
   fastify.get('/api/health', {
-    schema: {
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            status: { type: 'string' },
-            timestamp: { type: 'string' },
-            uptime: { type: 'number' }
-          }
-        }
-      }
-    },
+    schema: getHealthSchema,
     handler: systemController.getHealth.bind(systemController)
   });
 
-  // API documentation endpoint
   fastify.get('/api/docs', {
-    schema: {
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            name: { type: 'string' },
-            version: { type: 'string' },
-            endpoints: { type: 'object' }
-          }
-        }
-      }
-    },
+    schema: getApiDocsSchema,
     handler: systemController.getApiDocs.bind(systemController)
   });
 }

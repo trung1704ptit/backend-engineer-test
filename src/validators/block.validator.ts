@@ -23,9 +23,6 @@ export interface BlockIdValidationResult {
 }
 
 export class BlockValidator {
-  /**
-   * Validate block height is exactly one unit higher than current height
-   */
   static validateBlockHeight(height: number, currentHeight: number): BlockHeightValidationResult {
     const expectedHeight = currentHeight + 1;
     
@@ -50,9 +47,6 @@ export class BlockValidator {
     };
   }
 
-  /**
-   * Validate block ID matches the calculated hash
-   */
   static validateBlockId(block: Block): BlockIdValidationResult {
     const expectedId = BlockValidator.calculateBlockId(block.height, block.transactions);
     
@@ -75,17 +69,12 @@ export class BlockValidator {
     };
   }
 
-  /**
-   * Calculate the expected block ID using SHA256
-   */
   static calculateBlockId(height: number, transactions: Transaction[]): string {
     const dataToHash = height.toString() + transactions.map(tx => tx.id).join('');
     return crypto.createHash('sha256').update(dataToHash).digest('hex');
   }
 
-  /**
-   * Comprehensive block validation
-   */
+
   static validateBlock(block: Block, currentHeight: number): BlockValidationResult {
     const errors: string[] = [];
 
@@ -120,9 +109,6 @@ export class BlockValidator {
     };
   }
 
-  /**
-   * Validate block for genesis (first block)
-   */
   static validateGenesisBlock(block: Block): BlockValidationResult {
     const errors: string[] = [];
 
