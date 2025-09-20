@@ -5,7 +5,7 @@ import { TestDataFactory } from "../test-utils";
 describe("Rollback Validator", () => {
   describe("validateRollbackRequest", () => {
     test("should validate valid rollback", () => {
-      const result = RollbackValidator.validateRollbackRequest(5, 10, false);
+      const result = RollbackValidator.validateRollbackRequest(5, 10);
       
       expect(result.isValid).toBe(true);
       expect(result.currentHeight).toBe(10);
@@ -13,46 +13,46 @@ describe("Rollback Validator", () => {
     });
 
     test("should reject rollback to current height", () => {
-      const result = RollbackValidator.validateRollbackRequest(10, 10, false);
+      const result = RollbackValidator.validateRollbackRequest(10, 10);
       
       expect(result.isValid).toBe(false);
       expect(result.error).toContain("Cannot rollback to current or future height");
     });
 
     test("should reject rollback to future height", () => {
-      const result = RollbackValidator.validateRollbackRequest(15, 10, false);
+      const result = RollbackValidator.validateRollbackRequest(15, 10);
       
       expect(result.isValid).toBe(false);
       expect(result.error).toContain("Cannot rollback to current or future height");
     });
 
-    test("should require confirmation for large rollback", () => {
-      const result = RollbackValidator.validateRollbackRequest(5, 20, false);
-      
-      expect(result.isValid).toBe(false);
-      expect(result.requiresConfirmation).toBe(true);
-      expect(result.error).toContain("requires confirmation");
-    });
-
-    test("should accept large rollback with confirmation", () => {
-      const result = RollbackValidator.validateRollbackRequest(5, 20, true);
+    test("should accept large rollback without confirmation", () => {
+      const result = RollbackValidator.validateRollbackRequest(5, 20);
       
       expect(result.isValid).toBe(true);
-      expect(result.requiresConfirmation).toBe(true);
+      expect(result.requiresConfirmation).toBe(false);
     });
 
     test("should reject rollback exceeding 2000 blocks", () => {
-      const result = RollbackValidator.validateRollbackRequest(1, 2500, true);
+      const result = RollbackValidator.validateRollbackRequest(1, 2500);
       
       expect(result.isValid).toBe(false);
       expect(result.error).toContain("exceeds maximum allowed depth (2000 blocks)");
     });
 
     test("should reject invalid target height", () => {
-      const result = RollbackValidator.validateRollbackRequest(-1, 10, false);
+      const result = RollbackValidator.validateRollbackRequest(-1, 10);
       
       expect(result.isValid).toBe(false);
-      expect(result.error).toContain("Target height must be a positive integer");
+      expect(result.error).toContain("Target height must be a non-negative integer");
+    });
+
+    test("should allow rollback to height 0", () => {
+      const result = RollbackValidator.validateRollbackRequest(0, 5);
+      
+      expect(result.isValid).toBe(true);
+      expect(result.currentHeight).toBe(5);
+      expect(result.requiresConfirmation).toBe(false);
     });
   });
 

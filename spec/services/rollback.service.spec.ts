@@ -1,12 +1,15 @@
 import { expect, test, describe, beforeEach } from "bun:test";
 import { RollbackService } from "../../src/services/rollback.service";
-import { MockBlocksService } from "../test-utils";
+import { MockBlocksService, cleanupTestDatabase } from "../test-utils";
 
 describe("Rollback Service", () => {
   let rollbackService: RollbackService;
   let mockBlocksService: MockBlocksService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Clean up database before each test
+    await cleanupTestDatabase();
+    
     rollbackService = new RollbackService();
     mockBlocksService = new MockBlocksService();
     
@@ -18,7 +21,7 @@ describe("Rollback Service", () => {
     test("should perform successful rollback", async () => {
       mockBlocksService.setCurrentHeight(10);
 
-      const result = await rollbackService.rollbackToHeight(5, false);
+      const result = await rollbackService.rollbackToHeight(5);
       
       expect(result.fromHeight).toBe(10);
       expect(result.toHeight).toBe(5);
@@ -29,28 +32,21 @@ describe("Rollback Service", () => {
     test("should reject rollback to current height", async () => {
       mockBlocksService.setCurrentHeight(10);
 
-      await expect(rollbackService.rollbackToHeight(10, false))
+      await expect(rollbackService.rollbackToHeight(10))
         .rejects.toThrow("Cannot rollback to current or future height");
     });
 
     test("should reject rollback to future height", async () => {
       mockBlocksService.setCurrentHeight(10);
 
-      await expect(rollbackService.rollbackToHeight(15, false))
+      await expect(rollbackService.rollbackToHeight(15))
         .rejects.toThrow("Cannot rollback to current or future height");
     });
 
-    test("should require confirmation for large rollback", async () => {
+    test("should accept large rollback without confirmation", async () => {
       mockBlocksService.setCurrentHeight(20);
 
-      await expect(rollbackService.rollbackToHeight(5, false))
-        .rejects.toThrow("requires confirmation");
-    });
-
-    test("should accept large rollback with confirmation", async () => {
-      mockBlocksService.setCurrentHeight(20);
-
-      const result = await rollbackService.rollbackToHeight(5, true);
+      const result = await rollbackService.rollbackToHeight(5);
       
       expect(result.fromHeight).toBe(20);
       expect(result.toHeight).toBe(5);
@@ -60,8 +56,18 @@ describe("Rollback Service", () => {
     test("should reject rollback exceeding 2000 blocks", async () => {
       mockBlocksService.setCurrentHeight(2500);
 
-      await expect(rollbackService.rollbackToHeight(1, true))
+      await expect(rollbackService.rollbackToHeight(1))
         .rejects.toThrow("Rollback operation exceeds maximum allowed depth (2000 blocks)");
+    });
+
+    test("should allow rollback to height 0", async () => {
+      mockBlocksService.setCurrentHeight(5);
+
+      const result = await rollbackService.rollbackToHeight(0);
+      
+      expect(result.fromHeight).toBe(5);
+      expect(result.toHeight).toBe(0);
+      expect(result.blocksRemoved).toBe(5);
     });
   });
 

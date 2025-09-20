@@ -57,23 +57,11 @@ describe("Rollback Controller", () => {
     test("should handle rollback request structure", () => {
       const request = createMockRequest(
         {}, // params
-        { height: 5, confirm: false }, // query
+        { height: 5 }, // query
         {} // body
       );
 
       expect(request.query.height).toBe(5);
-      expect(request.query.confirm).toBe(false);
-    });
-
-    test("should handle rollback with confirmation", () => {
-      const request = createMockRequest(
-        {}, // params
-        { height: 5, confirm: true }, // query
-        {} // body
-      );
-
-      expect(request.query.height).toBe(5);
-      expect(request.query.confirm).toBe(true);
     });
   });
 
@@ -121,18 +109,6 @@ describe("Rollback Controller", () => {
       expect(typeof statusResponse.currentHeight).toBe("number");
       expect(statusResponse.lastRollback).toBeDefined();
       expect(Array.isArray(statusResponse.rollbackHistory)).toBe(true);
-    });
-
-    test("should validate rollback confirmation required response", () => {
-      const confirmationResponse = {
-        success: false,
-        error: "This rollback operation requires confirmation",
-        requiresConfirmation: true
-      };
-
-      expect(confirmationResponse.success).toBe(false);
-      expect(confirmationResponse.requiresConfirmation).toBe(true);
-      expect(typeof confirmationResponse.error).toBe("string");
     });
 
     test("should validate rollback error response", () => {

@@ -1,13 +1,16 @@
 import { expect, test, describe, beforeEach } from "bun:test";
 import { BlocksService } from "../../src/services/blocks.service";
 import { BlockValidator } from "../../src/validators/block.validator";
-import { TestDataFactory, MockUTXOService, expectBalances } from "../test-utils";
+import { TestDataFactory, MockUTXOService, expectBalances, cleanupTestDatabase } from "../test-utils";
 
 describe("Blocks Service", () => {
   let blocksService: BlocksService;
   let mockUTXOService: MockUTXOService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Clean up database before each test
+    await cleanupTestDatabase();
+    
     blocksService = new BlocksService();
     mockUTXOService = new MockUTXOService();
     

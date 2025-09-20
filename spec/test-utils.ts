@@ -2,6 +2,7 @@ import { expect } from "bun:test";
 import crypto from 'crypto';
 import type { Block, Transaction, Input, Output } from '../src/types/blocks.types';
 import type { UTXO } from '../src/services/utxo.service';
+import DatabaseConnection from '../src/database/connection';
 
 export const mockLogger = {
   info: () => {},
@@ -9,6 +10,25 @@ export const mockLogger = {
   error: () => {},
   debug: () => {}
 };
+
+// Test database cleanup utility
+export async function cleanupTestDatabase(): Promise<void> {
+  try {
+    const db = DatabaseConnection.getInstance();
+    await db.query('DELETE FROM rollback_history');
+    await db.query('DELETE FROM utxos');
+    await db.query('DELETE FROM blocks');
+    // Reset sequence if it exists
+    try {
+      await db.query('ALTER SEQUENCE blocks_id_seq RESTART WITH 1');
+    } catch (seqError) {
+      // Sequence might not exist, ignore the error
+    }
+  } catch (error) {
+    // Ignore cleanup errors in tests
+    console.warn('Test database cleanup failed:', error);
+  }
+}
 
 // Mock database connection
 export class MockDatabaseConnection {

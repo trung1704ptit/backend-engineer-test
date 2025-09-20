@@ -2,7 +2,7 @@ import { expect, test, describe, beforeEach } from "bun:test";
 import { BlocksService } from "../../src/services/blocks.service";
 import { BalanceService } from "../../src/services/balance.service";
 import { RollbackService } from "../../src/services/rollback.service";
-import { TestDataFactory, MockUTXOService, expectBalances } from "../test-utils";
+import { TestDataFactory, MockUTXOService, expectBalances, cleanupTestDatabase } from "../test-utils";
 
 // Mock the logger and database
 // Note: In a real implementation, you would use proper mocking
@@ -14,7 +14,10 @@ describe("End-to-End Blockchain Integration", () => {
   let rollbackService: RollbackService;
   let mockUTXOService: MockUTXOService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Clean up database before each test
+    await cleanupTestDatabase();
+    
     // Create services
     blocksService = new BlocksService();
     balanceService = new BalanceService();
@@ -105,7 +108,7 @@ describe("End-to-End Blockchain Integration", () => {
       expectBalances(utxos, expectedBalances.afterBlock3);
 
       // Perform rollback to height 2
-      const rollbackInfo = await rollbackService.rollbackToHeight(2, false);
+      const rollbackInfo = await rollbackService.rollbackToHeight(2);
       
       expect(rollbackInfo.fromHeight).toBe(3);
       expect(rollbackInfo.toHeight).toBe(2);
@@ -290,15 +293,15 @@ describe("End-to-End Blockchain Integration", () => {
       (blocksService as any).getCurrentBlockHeight = () => Promise.resolve(2500);
 
       // Try to rollback to current height
-      await expect(testRollbackService.rollbackToHeight(2500, false))
+      await expect(testRollbackService.rollbackToHeight(2500))
         .rejects.toThrow("Cannot rollback to current or future height");
 
       // Try to rollback to future height
-      await expect(testRollbackService.rollbackToHeight(2501, false))
+      await expect(testRollbackService.rollbackToHeight(2501))
         .rejects.toThrow("Cannot rollback to current or future height");
 
       // Try to rollback too far - this should fail with 2000+ block limit
-      await expect(testRollbackService.rollbackToHeight(1, true))
+      await expect(testRollbackService.rollbackToHeight(1))
         .rejects.toThrow("Rollback operation exceeds maximum allowed depth (2000 blocks)");
     });
   });
