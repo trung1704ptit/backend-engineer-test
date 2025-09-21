@@ -54,7 +54,6 @@ backend-engineer-test/
 │   │   ├── utxo.validator.ts        # UTXO validation
 │   │   └── index.ts                 # Validator exports
 │   ├── index.ts                     # Application entry point
-│   └── readme.md                    # Internal documentation
 ├── 📁 spec/                         # Test suite
 │   ├── 📁 controllers/              # Controller tests
 │   │   ├── balance.controller.spec.ts
@@ -80,6 +79,7 @@ backend-engineer-test/
 ├── 📄 Dockerfile                    # Docker image configuration
 ├── 📄 bun.lockb                     # Bun lockfile
 └── 📄 README.md                     # Project documentation
+└── 📄 PROJECT_STRUCTURE.md          # Project structure and some test body
 ```
 
 ## Architecture Overview
