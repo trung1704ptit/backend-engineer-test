@@ -117,7 +117,17 @@ backend-engineer-test/
 - `GET /health` - System health check
 
 
-### Add Block 1: Genesis Block (Creates Initial Money)
+### How to Test
+For testing we are setting 
+DATABASE_URL=postgres://myuser:mypassword@localhost:5432/mydatabase
+if run in localhost: let create .env file and add above variable.
+
+run docker:
+```
+docker-compose up -d --build
+```
+
+#### Add Block 1: Genesis Block (Creates Initial Money)
 
 ```
 {
@@ -138,7 +148,7 @@ backend-engineer-test/
 }
 ```
 
-### Transfer from Address 1 to Addresses 2 and 3
+#### Transfer from Address 1 to Addresses 2 and 3
 
 ```
 {
@@ -201,7 +211,7 @@ backend-engineer-test/
 ```
 
 
-### Get Balance
+#### Get Balance
 http://localhost:3000/balance/1E6jxV8gHx5Y5Lh0C2F2uG0dH5kI6mN7oP8
 
 Response:
@@ -217,7 +227,7 @@ Response:
 ```
 
 
-### Rollback
+#### Rollback
 http://localhost:3000/rollback?height=2
 
 Response:
