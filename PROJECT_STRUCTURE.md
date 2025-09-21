@@ -84,7 +84,7 @@ backend-engineer-test/
 
 ## Architecture Overview
 
-### 🏗️ **Layered Architecture**
+### **Layered Architecture**
 
 - **Controllers** → Handle HTTP requests and responses
 - **Services** → Contain business logic and orchestration
@@ -118,11 +118,12 @@ backend-engineer-test/
 
 
 ### How to Test
-For testing we are setting 
+For testing I am setting 
 DATABASE_URL=postgres://myuser:mypassword@localhost:5432/mydatabase
-if run in localhost: let create .env file and add above variable.
 
-run docker:
+If run in localhost: let create .env file and add above variable.
+
+Run docker:
 ```
 docker-compose up -d --build
 ```
