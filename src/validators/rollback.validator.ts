@@ -28,7 +28,6 @@ export class RollbackValidator {
     targetHeight: number,
     currentHeight: number
   ): RollbackValidationResult {
-    // Validate target height is valid
     if (typeof targetHeight !== 'number' || !Number.isInteger(targetHeight) || targetHeight < 0) {
       return {
         isValid: false,
@@ -38,7 +37,6 @@ export class RollbackValidator {
       };
     }
 
-    // Validate target height is not current or future
     if (targetHeight >= currentHeight) {
       return {
         isValid: false,
@@ -50,7 +48,6 @@ export class RollbackValidator {
 
     const blocksToRemove = currentHeight - targetHeight;
 
-    // Validate rollback is not too deep (max 2000 blocks as per requirements)
     if (blocksToRemove > 2000) {
       return {
         isValid: false,
@@ -78,7 +75,6 @@ export class RollbackValidator {
   ): RollbackSafetyResult {
     const blocksToRemove = currentHeight - targetHeight;
 
-    // Determine risk level based on blocks to remove
     let riskLevel: 'low' | 'medium' | 'high' | 'critical';
     if (blocksToRemove <= 5) {
       riskLevel = 'low';
@@ -90,9 +86,8 @@ export class RollbackValidator {
       riskLevel = 'critical';
     }
 
-    // Check if this is a very recent rollback (within last hour)
     const isRecentRollback = lastRollback && 
-      (Date.now() - new Date(lastRollback.timestamp).getTime()) < 3600000; // 1 hour
+      (Date.now() - new Date(lastRollback.timestamp).getTime()) < 3600000;
 
     if (isRecentRollback) {
       riskLevel = 'critical';
@@ -172,9 +167,8 @@ export class RollbackValidator {
       };
     }
 
-    // Check if rollback would remove too many blocks
     const blocksToRemove = currentHeight - targetHeight;
-    if (blocksToRemove > currentHeight * 0.9) { // More than 90% of blockchain
+    if (blocksToRemove > currentHeight * 0.9) {
       return {
         isValid: false,
         currentHeight,
@@ -205,7 +199,7 @@ export class RollbackValidator {
     confirmation: RollbackConfirmationResult;
     overall: { isValid: boolean; errors: string[] };
   } {
-    const validation = RollbackValidator.validateRollbackRequest(targetHeight, currentHeight, confirmed);
+    const validation = RollbackValidator.validateRollbackRequest(targetHeight, currentHeight);
     const safety = RollbackValidator.assessRollbackSafety(targetHeight, currentHeight, lastRollback);
     const confirmation = RollbackValidator.validateRollbackConfirmation(confirmed, validation.requiresConfirmation);
 

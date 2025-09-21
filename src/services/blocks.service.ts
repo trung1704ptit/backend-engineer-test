@@ -12,22 +12,18 @@ export class BlocksService {
     try {
       logger.info('Adding new block to blockchain', { blockId: block.id, height: block.height });
 
-      // Get current height for validation
       const currentHeight = await this.getCurrentBlockHeight();
 
-      // Validate block height
       const heightValidation = BlockValidator.validateBlockHeight(block.height, currentHeight);
       if (!heightValidation.isValid) {
         throw new Error(heightValidation.error!);
       }
 
-      // Validate block ID
       const idValidation = BlockValidator.validateBlockId(block);
       if (!idValidation.isValid) {
         throw new Error(idValidation.error!);
       }
 
-      // Validate transactions
       const transactionValidation = await TransactionValidator.validateTransactions(
         block.transactions,
         (input) => this.utxoService.getInputValue(input)
@@ -36,12 +32,10 @@ export class BlocksService {
         throw new Error(`Transaction validation failed: ${transactionValidation.errors.join(', ')}`);
       }
 
-      // Process transactions in UTXO set
       for (const transaction of block.transactions) {
         await this.utxoService.processTransaction(transaction, block.height);
       }
 
-      // Save block to database
       await this.saveBlock(block);
 
       logger.info('Block added successfully', { blockId: block.id, height: block.height });

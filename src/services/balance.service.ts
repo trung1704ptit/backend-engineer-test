@@ -11,14 +11,12 @@ export class BalanceService {
     try {
       logger.info('Getting balance for address', { address });
 
-      // Validate address format
       if (!this.isValidAddress(address)) {
         throw new Error('Invalid address format');
       }
 
-      // Get balance from indexed data
       const balance = await this.getIndexedBalance(address);
-      const currency = 'BTC'; // TODO: Make configurable
+      const currency = 'BTC';
 
       const balanceInfo: BalanceInfo = {
         address,
@@ -54,7 +52,6 @@ export class BalanceService {
     try {
       logger.info('Retrieving transaction history', { address, limit, offset });
 
-      // TODO: Get transactions from database with pagination
       const transactions: TransactionHistoryItem[] = [];
 
       logger.info('Transaction history retrieved', { 
@@ -71,7 +68,6 @@ export class BalanceService {
 
   // Private helper methods
   private isValidAddress(address: string): boolean {
-    // TODO: Implement proper address validation
     return address && address.length >= 10 ? true: false;
   }
 }

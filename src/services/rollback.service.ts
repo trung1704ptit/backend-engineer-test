@@ -17,19 +17,16 @@ export class RollbackService {
 
       const currentHeight = await this.blocksService.getCurrentBlockHeight();
 
-      // Validate rollback request using validator
       const validation = RollbackValidator.validateRollbackRequest(targetHeight, currentHeight);
       if (!validation.isValid) {
         throw new Error(validation.error!);
       }
 
-      // Additional validation: ensure rollback is not more than 2000 blocks
       const blocksToRemove = currentHeight - targetHeight;
       if (blocksToRemove > 2000) {
         throw new Error('Rollback depth exceeds maximum allowed (2000 blocks)');
       }
 
-      // Perform rollback operation
       await this.performRollback(targetHeight, currentHeight);
 
       const rollbackInfo: RollbackInfo = {
@@ -39,7 +36,6 @@ export class RollbackService {
         timestamp: new Date().toISOString()
       };
 
-      // Save rollback operation to history
       await this.saveRollbackHistory(rollbackInfo);
 
       logger.info('Rollback completed successfully', rollbackInfo);
@@ -62,7 +58,6 @@ export class RollbackService {
 
       const currentHeight = await this.blocksService.getCurrentBlockHeight();
       
-      // Get last rollback
       const lastRollbackResult = await this.db.query(
         'SELECT from_height, to_height, blocks_removed, timestamp FROM rollback_history ORDER BY timestamp DESC LIMIT 1'
       );
@@ -74,7 +69,6 @@ export class RollbackService {
         timestamp: lastRollbackResult.rows[0].timestamp
       } : null;
 
-      // Get rollback history (last 10)
       const historyResult = await this.db.query(
         'SELECT from_height, to_height, blocks_removed, timestamp FROM rollback_history ORDER BY timestamp DESC LIMIT 10'
       );
@@ -159,27 +153,21 @@ export class RollbackService {
     try {
       logger.info('Starting rollback operation', { targetHeight, currentHeight });
 
-      // Get all blocks that need to be rolled back (from currentHeight down to targetHeight + 1)
       const blocksToRollback = await this.getBlocksToRollback(targetHeight + 1, currentHeight);
       
-      // Process blocks in reverse order (newest first) to undo transactions
       for (let i = blocksToRollback.length - 1; i >= 0; i--) {
         const block = blocksToRollback[i];
         await this.undoBlockTransactions(block);
       }
 
-      // Remove blocks from storage
       await this.removeBlocksFromHeight(targetHeight + 1);
 
-      // If rolling back to height 0, clear all UTXOs
       if (targetHeight === 0) {
         await this.clearAllUTXOs();
       } else {
-        // For partial rollbacks, also clear UTXOs from removed blocks
         await this.clearUTXOsFromHeight(targetHeight + 1);
       }
 
-      // Update blockchain state
       await this.updateBlockchainState(targetHeight);
 
       logger.info('Rollback operation completed', { 
@@ -200,7 +188,6 @@ export class RollbackService {
     try {
       logger.info('Undoing block transactions', { blockId: block.id, height: block.height });
 
-      // Process transactions in reverse order
       for (let i = block.transactions.length - 1; i >= 0; i--) {
         const transaction = block.transactions[i];
         await this.undoTransaction(transaction, block.height);
@@ -219,14 +206,11 @@ export class RollbackService {
     try {
       logger.info('Undoing transaction', { txId: transaction.id, blockHeight });
 
-      // Reverse the transaction: outputs become inputs, inputs become outputs
-      // 1. Remove the outputs that were added (they become unspent again)
       for (let i = 0; i < transaction.outputs.length; i++) {
         const output = transaction.outputs[i];
         await this.removeUTXO(transaction.id, i);
       }
 
-      // 2. Restore the inputs that were spent (they become unspent again)
       for (const input of transaction.inputs) {
         await this.restoreUTXO(input.txId, input.index, blockHeight);
       }
@@ -260,7 +244,6 @@ export class RollbackService {
    */
   private async restoreUTXO(txId: string, outputIndex: number, blockHeight: number): Promise<void> {
     try {
-      // Find the block that contains the transaction with the given txId
       const result = await this.db.query(
         'SELECT data FROM blocks WHERE data @> $1',
         [`{"transactions":[{"id":"${txId}"}]}`]
@@ -282,7 +265,6 @@ export class RollbackService {
         throw new Error(`Output ${outputIndex} not found in transaction ${txId}`);
       }
 
-      // Restore the UTXO
       await this.db.query(
         'INSERT INTO utxos (tx_id, output_index, address, value, block_height) VALUES ($1, $2, $3, $4, $5)',
         [txId, outputIndex, output.address, output.value, block.height]
@@ -335,9 +317,6 @@ export class RollbackService {
    */
   private async updateBlockchainState(targetHeight: number): Promise<void> {
     try {
-      // The blockchain state is automatically updated when blocks are deleted
-      // The current height is determined by MAX(height) from blocks table
-      // No additional state update needed since we're using the database as the source of truth
       logger.info('Blockchain state updated', { newHeight: targetHeight });
     } catch (error) {
       logger.error('Failed to update blockchain state', { targetHeight }, error as Error);

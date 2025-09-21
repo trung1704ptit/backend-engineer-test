@@ -16,12 +16,10 @@ export class UTXOService {
 
   async processTransaction(transaction: Transaction, blockHeight: number): Promise<void> {
     try {
-      // Remove spent outputs (inputs)
       for (const input of transaction.inputs) {
         await this.removeUTXO(input.txId, input.index);
       }
 
-      // Add new outputs
       for (let i = 0; i < transaction.outputs.length; i++) {
         const output = transaction.outputs[i];
         await this.addUTXO({
@@ -129,7 +127,7 @@ export class UTXOService {
         [address]
       );
       
-      const utxos: UTXO[] = result.rows.map(row => ({
+      const utxos: UTXO[] = result.rows.map((row: any) => ({
         txId: row.tx_id,
         outputIndex: row.output_index,
         address: row.address,
