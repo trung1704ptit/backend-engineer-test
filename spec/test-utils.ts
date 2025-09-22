@@ -2,7 +2,6 @@ import { expect } from "bun:test";
 import crypto from 'crypto';
 import type { Block, Transaction, Input, Output } from '../src/types/blocks.types';
 import type { UTXO } from '../src/services/utxo.service';
-import DatabaseConnection from '../src/database/connection';
 
 export const mockLogger = {
   info: () => {},
@@ -11,23 +10,11 @@ export const mockLogger = {
   debug: () => {}
 };
 
-// Test database cleanup utility
+// Mock database cleanup utility - no actual database operations
 export async function cleanupTestDatabase(): Promise<void> {
-  try {
-    const db = DatabaseConnection.getInstance();
-    await db.query('DELETE FROM rollback_history');
-    await db.query('DELETE FROM utxos');
-    await db.query('DELETE FROM blocks');
-    // Reset sequence if it exists
-    try {
-      await db.query('ALTER SEQUENCE blocks_id_seq RESTART WITH 1');
-    } catch (seqError) {
-      // Sequence might not exist, ignore the error
-    }
-  } catch (error) {
-    // Ignore cleanup errors in tests
-    console.warn('Test database cleanup failed:', error);
-  }
+  // Mock implementation - no actual database cleanup needed
+  // This is just a placeholder for tests that expect this function
+  return Promise.resolve();
 }
 
 // Mock database connection
@@ -43,11 +30,149 @@ export class MockDatabaseConnection {
   }
 
   async query(sql: string, params?: any[]): Promise<{ rows: any[] }> {
+    // Parse basic SQL operations for testing
+    const sqlLower = sql.toLowerCase().trim();
+    
+    if (sqlLower.startsWith('select')) {
+      return this.handleSelect(sql, params);
+    } else if (sqlLower.startsWith('insert')) {
+      return this.handleInsert(sql, params);
+    } else if (sqlLower.startsWith('delete')) {
+      return this.handleDelete(sql, params);
+    } else if (sqlLower.startsWith('alter')) {
+      // Handle sequence resets
+      return { rows: [] };
+    }
+    
+    return { rows: [] };
+  }
+
+  private handleSelect(sql: string, params?: any[]): { rows: any[] } {
+    // Handle specific queries used in the services
+    if (sql.includes('blocks') && sql.includes('order by height')) {
+      // getAllBlocks query
+      return { rows: this.data.get('blocks') || [] };
+    } else if (sql.includes('blocks') && sql.includes('height =')) {
+      // getBlockByHeight query
+      const height = params?.[0];
+      const blocks = this.data.get('blocks') || [];
+      const block = blocks.find((b: any) => b.data.height === height);
+      return { rows: block ? [block] : [] };
+    } else if (sql.includes('blocks') && sql.includes('height >=') && sql.includes('height <=')) {
+      // getBlocksToRollback query
+      const fromHeight = params?.[0];
+      const toHeight = params?.[1];
+      const blocks = this.data.get('blocks') || [];
+      const filtered = blocks.filter((b: any) => b.data.height >= fromHeight && b.data.height <= toHeight);
+      // Return the data property directly for rollback service
+      return { rows: filtered.map((b: any) => b.data) };
+    } else if (sql.includes('max(height)') || sql.includes('MAX(height)')) {
+      // getCurrentBlockHeight query
+      const blocks = this.data.get('blocks') || [];
+      const maxHeight = blocks.length > 0 ? Math.max(...blocks.map((b: any) => b.data.height)) : 0;
+      return { rows: [{ height: maxHeight.toString() }] };
+    } else if (sql.includes('utxos') && sql.includes('address =')) {
+      // getAddressUTXOs query
+      const address = params?.[0];
+      const utxos = this.data.get('utxos') || [];
+      const filtered = utxos.filter((u: any) => u.address === address);
+      return { rows: filtered };
+    } else if (sql.includes('utxos') && sql.includes('tx_id =') && sql.includes('output_index =')) {
+      // getUTXO query
+      const txId = params?.[0];
+      const outputIndex = params?.[1];
+      const utxos = this.data.get('utxos') || [];
+      const utxo = utxos.find((u: any) => u.tx_id === txId && u.output_index === outputIndex);
+      return { rows: utxo ? [utxo] : [] };
+    } else if (sql.includes('rollback_history') && sql.includes('order by timestamp desc limit 1')) {
+      // getLastRollback query
+      const history = this.data.get('rollback_history') || [];
+      const lastRollback = history.length > 0 ? history[0] : null;
+      return { rows: lastRollback ? [lastRollback] : [] };
+    } else if (sql.includes('rollback_history') && sql.includes('order by timestamp desc limit')) {
+      // getRollbackHistory query
+      const limit = params?.[0] || 10;
+      const history = this.data.get('rollback_history') || [];
+      return { rows: history.slice(0, limit) };
+    } else if (sql.includes('blocks') && sql.includes('data @>')) {
+      // Complex JSON query for transaction lookup
+      const blocks = this.data.get('blocks') || [];
+      // For the rollback service, we need to find blocks that contain specific transactions
+      // This is a simplified mock - in real implementation, this would be a JSON query
+      const searchPattern = sql.match(/\{"transactions":\[{"id":"([^"]+)"}\]\}/);
+      if (searchPattern) {
+        const txId = searchPattern[1];
+        const matchingBlocks = blocks.filter((block: any) => 
+          block.data.transactions && block.data.transactions.some((tx: any) => tx.id === txId)
+        );
+        // Return the data property directly for the restoreUTXO method
+        return { rows: matchingBlocks.map((b: any) => ({ data: b.data })) };
+      }
+      return { rows: blocks.map((b: any) => ({ data: b.data })) };
+    }
+    
+    return { rows: [] };
+  }
+
+  private handleInsert(sql: string, params?: any[]): { rows: any[] } {
+    if (sql.includes('blocks')) {
+      // Insert block
+      const [id, height, data] = params || [];
+      const blocks = this.data.get('blocks') || [];
+      blocks.push({ id, height, data: JSON.parse(data) });
+      this.data.set('blocks', blocks);
+    } else if (sql.includes('utxos')) {
+      // Insert UTXO
+      const [tx_id, output_index, address, value, block_height] = params || [];
+      const utxos = this.data.get('utxos') || [];
+      utxos.push({ tx_id, output_index, address, value, block_height });
+      this.data.set('utxos', utxos);
+    } else if (sql.includes('rollback_history')) {
+      // Insert rollback history
+      const [from_height, to_height, blocks_removed, timestamp] = params || [];
+      const history = this.data.get('rollback_history') || [];
+      history.unshift({ from_height, to_height, blocks_removed, timestamp });
+      this.data.set('rollback_history', history);
+    }
+    return { rows: [] };
+  }
+
+  private handleDelete(sql: string, params?: any[]): { rows: any[] } {
+    if (sql.includes('utxos') && sql.includes('tx_id =') && sql.includes('output_index =')) {
+      // Delete specific UTXO
+      const txId = params?.[0];
+      const outputIndex = params?.[1];
+      const utxos = this.data.get('utxos') || [];
+      const filtered = utxos.filter((u: any) => !(u.tx_id === txId && u.output_index === outputIndex));
+      this.data.set('utxos', filtered);
+    } else if (sql.includes('blocks') && sql.includes('height >=')) {
+      // Delete blocks from height
+      const fromHeight = params?.[0];
+      const blocks = this.data.get('blocks') || [];
+      const filtered = blocks.filter((b: any) => b.data.height < fromHeight);
+      this.data.set('blocks', filtered);
+    } else if (sql.includes('utxos') && sql.includes('block_height >=')) {
+      // Delete UTXOs from height
+      const fromHeight = params?.[0];
+      const utxos = this.data.get('utxos') || [];
+      const filtered = utxos.filter((u: any) => u.block_height < fromHeight);
+      this.data.set('utxos', filtered);
+    } else if (sql.includes('delete from')) {
+      // Clear all data from table
+      const tableName = sql.match(/delete from (\w+)/i)?.[1];
+      if (tableName) {
+        this.data.set(tableName, []);
+      }
+    }
     return { rows: [] };
   }
 
   async connect(): Promise<void> {
-    // Mock connection
+    // Mock connection - always succeeds
+  }
+
+  async close(): Promise<void> {
+    // Mock close - always succeeds
   }
 
   // Mock data storage for tests
@@ -61,6 +186,27 @@ export class MockDatabaseConnection {
 
   clearData(): void {
     this.data.clear();
+  }
+
+  // Helper methods for test setup
+  setBlocks(blocks: any[]): void {
+    const blockData = blocks.map(block => ({
+      id: block.id,
+      height: block.height,
+      data: block
+    }));
+    this.setData('blocks', blockData);
+  }
+
+  setUTXOs(utxos: UTXO[]): void {
+    const utxoData = utxos.map(utxo => ({
+      tx_id: utxo.txId,
+      output_index: utxo.outputIndex,
+      address: utxo.address,
+      value: utxo.value,
+      block_height: utxo.blockHeight
+    }));
+    this.setData('utxos', utxoData);
   }
 }
 

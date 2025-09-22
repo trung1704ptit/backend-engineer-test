@@ -2,6 +2,7 @@ import { expect, test, describe, beforeEach } from "bun:test";
 import { BlocksService } from "../../src/services/blocks.service";
 import { BlockValidator } from "../../src/validators/block.validator";
 import { TestDataFactory, MockUTXOService, expectBalances, cleanupTestDatabase } from "../test-utils";
+import { mockServiceDatabase } from "../database-mock";
 
 describe("Blocks Service", () => {
   let blocksService: BlocksService;
@@ -14,8 +15,13 @@ describe("Blocks Service", () => {
     blocksService = new BlocksService();
     mockUTXOService = new MockUTXOService();
     
-    // Replace the UTXO service with mock
+    // Replace the UTXO service and database connection with mocks
     (blocksService as any).utxoService = mockUTXOService;
+    mockServiceDatabase(blocksService);
+    
+    // Clear the mock database between tests
+    const mockDb = (blocksService as any).db;
+    mockDb.clearData();
   });
 
   describe("addBlock", () => {
@@ -123,9 +129,25 @@ describe("Blocks Service", () => {
 
   describe("getCurrentBlockHeight", () => {
     test("should return current block height", async () => {
+      // Set up some test blocks
+      const testBlocks = [
+        TestDataFactory.createBlock("block1", 1, []),
+        TestDataFactory.createBlock("block2", 2, [])
+      ];
+      
+      // Set the blocks in the mock database
+      const mockDb = (blocksService as any).db;
+      mockDb.setBlocks(testBlocks);
+      
       const height = await blocksService.getCurrentBlockHeight();
       expect(typeof height).toBe("number");
-      expect(height).toBeGreaterThanOrEqual(0);
+      expect(height).toBe(2);
+    });
+    
+    test("should return 0 when no blocks exist", async () => {
+      const height = await blocksService.getCurrentBlockHeight();
+      expect(typeof height).toBe("number");
+      expect(height).toBe(0);
     });
   });
 });

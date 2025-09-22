@@ -1,6 +1,7 @@
 import { expect, test, describe, beforeEach } from "bun:test";
 import { RollbackService } from "../../src/services/rollback.service";
 import { MockBlocksService, cleanupTestDatabase } from "../test-utils";
+import { mockServiceDatabase } from "../database-mock";
 
 describe("Rollback Service", () => {
   let rollbackService: RollbackService;
@@ -13,13 +14,26 @@ describe("Rollback Service", () => {
     rollbackService = new RollbackService();
     mockBlocksService = new MockBlocksService();
     
-    // Replace the blocks service with mock
+    // Replace the blocks service and database connection with mocks
     (rollbackService as any).blocksService = mockBlocksService;
+    mockServiceDatabase(rollbackService);
+    
+    // Clear the mock database between tests
+    const mockDb = (rollbackService as any).db;
+    mockDb.clearData();
   });
 
   describe("rollbackToHeight", () => {
     test("should perform successful rollback", async () => {
       mockBlocksService.setCurrentHeight(10);
+      
+      // Set up test blocks in the mock database
+      const mockDb = (rollbackService as any).db;
+      const testBlocks = [
+        { id: "block1", height: 1, data: { id: "block1", height: 1, transactions: [{ id: "tx1", inputs: [], outputs: [{ address: "addr1", value: 10 }] }] } },
+        { id: "block2", height: 2, data: { id: "block2", height: 2, transactions: [{ id: "tx2", inputs: [{ txId: "tx1", index: 0 }], outputs: [{ address: "addr2", value: 10 }] }] } }
+      ];
+      mockDb.setBlocks(testBlocks);
 
       const result = await rollbackService.rollbackToHeight(5);
       
@@ -62,6 +76,13 @@ describe("Rollback Service", () => {
 
     test("should allow rollback to height 0", async () => {
       mockBlocksService.setCurrentHeight(5);
+      
+      // Set up test blocks in the mock database
+      const mockDb = (rollbackService as any).db;
+      const testBlocks = [
+        { id: "block1", height: 1, data: { id: "block1", height: 1, transactions: [{ id: "tx1", inputs: [], outputs: [{ address: "addr1", value: 10 }] }] } }
+      ];
+      mockDb.setBlocks(testBlocks);
 
       const result = await rollbackService.rollbackToHeight(0);
       

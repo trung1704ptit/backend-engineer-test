@@ -32,7 +32,6 @@ backend-engineer-test/
 │   │   └── index.ts                 # Schema exports
 │   ├── 📁 services/                 # Business logic layer
 │   │   ├── balance.service.ts       # Balance calculation logic
-│   │   ├── blockchain.service.ts    # Blockchain operations
 │   │   ├── blocks.service.ts        # Block management logic
 │   │   ├── rollback.service.ts      # Rollback operations
 │   │   ├── utxo.service.ts          # UTXO management

@@ -1,6 +1,7 @@
 import { expect, test, describe, beforeEach } from "bun:test";
 import { BalanceService } from "../../src/services/balance.service";
 import { TestDataFactory, MockUTXOService } from "../test-utils";
+import { mockServiceDatabase } from "../database-mock";
 
 describe("Balance Service", () => {
   let balanceService: BalanceService;
@@ -10,8 +11,13 @@ describe("Balance Service", () => {
     balanceService = new BalanceService();
     mockUTXOService = new MockUTXOService();
     
-    // Replace the UTXO service with mock
+    // Replace the UTXO service and database connection with mocks
     (balanceService as any).utxoService = mockUTXOService;
+    mockServiceDatabase(balanceService);
+    
+    // Clear the mock database between tests
+    const mockDb = (balanceService as any).db;
+    mockDb.clearData();
   });
 
   describe("getBalance", () => {
