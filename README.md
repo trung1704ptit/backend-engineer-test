@@ -1,12 +1,5 @@
 # EMURGO Backend Engineer Challenge
 
-This challenge is designed to evaluate your skills with data processing and API development. You will be responsible for creating an indexer that will keep track of the balance of each address in a blockchain.
-
-Please read all instructions bellow carefully.
-
-## Instructions
-Fork this repository and make the necessary changes to complete the challenge. Once you are done, simply send your repository link to us and we will review it.
-
 ## Setup
 This coding challenge uses [Bun](https://bun.sh/) as its runtime. If you are unfamiliar with it, you can follow the instructions on the official website to install it - it works pretty much the same as NodeJS, but has a ton of features that make our life easier, like a built-in test engine and TypeScript compiler.
 
